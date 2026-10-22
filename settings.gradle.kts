@@ -1,0 +1,4 @@
+plugins {
+}
+
+rootProject.name = "mwcc"
