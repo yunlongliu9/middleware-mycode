@@ -1,17 +1,55 @@
 package mw.client;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Request;
+import javax.ws.rs.core.Response;
+
+import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
 public class MWRegistryClient extends MWShell {
+
+	private WebTarget client;
+	private String RegistryURL;
+	private HttpAuthenticationFeature auth;
+	private final String username = "ja10fylo";
+	private final String password = "mcyuvretqnvf";
+
+	public MWRegistryClient() {
+		try {
+			auth = HttpAuthenticationFeature.basic(this.username, this.password);
+			RegistryURL = Files.readString(Path.of("misc/aufgabe1/registry.address")).trim();
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to read registry address", e);
+		}
+		this.client = ClientBuilder.newClient().target(RegistryURL);
+		this.client.register(auth);
+	}
 
 	// ##########
 	// # GROUPS #
 	// ##########
 
 	public String[] listGroups() throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
-		return null;
+		if (this.client == null) {
+			throw new MWWebServiceException("Client is not successfully initialized");
+		}
+
+		Response response = this.client.request().get();
+		int statusCode = response.getStatus();
+		if ( statusCode == 200){
+			String[] groups = response.readEntity(String[].class);
+			response.close();
+			return groups;
+		} else {
+			String errorMessage = response.readEntity(String.class);
+			response.close();
+			throw new MWWebServiceException(
+					"Failed to list groups: HTTP " + statusCode + " - " + errorMessage);
+		}
 	}
 
 
@@ -20,22 +58,54 @@ public class MWRegistryClient extends MWShell {
 	// ############
 
 	public String[] listServices(String group) throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
-		return null;
+		if (this.client == null) {
+			throw new MWWebServiceException("Client is not successfully initialized");
+		}
+		Response response = this.client.path(group).request().get();
+		int statusCode = response.getStatus();
+		if (statusCode == 200){
+			String[] services = response.readEntity(String[].class);
+			response.close();
+			return services;
+		}else{
+			try {
+				checkResponse(statusCode);
+				return null;
+			} finally {
+				response.close();
+			}
+		}
 	}
+
 
 	public void createService(String group, String service) throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
+		Response response = this.client.path(group).path(service).request().put(Entity.text(""));
+		int statusCode = response.getStatus();
+		if (statusCode == 200){
+			response.close();
+		}else {
+			try{
+				checkResponse(statusCode);
+			}finally{
+				response.close();
+			}
+		}
 	}
 
+
+
 	public void deleteService(String group, String service) throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
+		Response response = this.client.path(group).path(service).request().delete();
+		int statusCode = response.getStatus();
+		if (statusCode == 200){
+			response.close();
+		}else{
+			try {
+				checkResponse(statusCode);
+			} finally {
+				response.close();
+			}
+		}
 	}
 
 
@@ -43,32 +113,107 @@ public class MWRegistryClient extends MWShell {
 	// # ENTRIES #
 	// ###########
 
+
+
 	public String[] listKeys(String group, String service) throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
-		return null;
+		Response response = (this.client.path(group).path(service)).request().get();
+		int statusCode = response.getStatus();
+		if (statusCode == 200){
+			String[] keys = response.readEntity(String[].class);
+			response.close();
+			return keys;
+		}else {
+			try {
+				checkResponse(statusCode);
+				return null;
+			} finally {
+				response.close();
+			}
+		}
 	}
 
+	// probably cache here,very slow 1st req;
 	public String getValue(String group, String service, String key) throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
-		return null;
+		Response response = this.client
+						.path(group)
+						.path(service)
+						.path(key)
+						.request().get();
+		int statusCode = response.getStatus();
+		if (statusCode == 200){
+			String value = response.readEntity(String.class);
+			response.close();
+			return value;
+		}else {
+			try {
+				checkResponse(statusCode);
+				return null;
+			} finally {
+				response.close();
+			}
+		}
 	}
+
 
 	public void putValue(String group, String service, String key, String value) throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
+		Response response = this.client
+						.path(group)
+						.path(service)
+						.path(key)
+						.request().put(Entity.text(value));
+		int statusCode = response.getStatus();
+		if (statusCode == 200){
+			response.close();
+		}
+		else {
+			try {
+				checkResponse(statusCode);
+			} finally {
+				response.close();
+			}
+		}
 	}
 
 	public void deleteValue(String group, String service, String key) throws MWWebServiceException {
-		/*
-		 * TODO: Implement method
-		 */
+		Response response = this.client
+						.path(group)
+						.path(service)
+						.path(key)
+						.request().delete();
+		int statusCode = response.getStatus();
+		if (statusCode == 200){
+			response.close();
+		}else{
+			try {
+				checkResponse(statusCode);
+			} finally {
+				response.close();
+			}
+		}
 	}
 
+	private void checkResponse(int statusCode) throws MWWebServiceException {
+		String reason;
+
+		if (statusCode == 400) {
+			reason = "Bad Request";
+		} else if (statusCode == 401) {
+			reason = "Invalid username or password";
+		} else if (statusCode == 403) {
+			reason = "Permission denied";
+		} else if (statusCode == 404) {
+			reason = "Resource not found";
+		} else if (statusCode == 413) {
+			reason = "Payload too large";
+		} else if (statusCode >= 500) {
+			reason = "Server error";
+		} else {
+			reason = "Unexpected HTTP response";
+		}
+
+		throw new MWWebServiceException(
+				reason + " (HTTP " + statusCode + ")");
+	}
 
 	// ###################
 	// # PATH STATISTICS #

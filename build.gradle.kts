@@ -5,8 +5,16 @@ plugins {
 repositories {
     mavenCentral()
 }
-
 dependencies {
+    // Versions
+    val openstack4jVersion = "3.12"
+
+    // Aufgabe 1: JAX-RS / Jersey / Grizzly
+    implementation(platform("org.glassfish.jersey:jersey-bom:2.45"))
+    implementation("org.glassfish.jersey.bundles:jaxrs-ri")
+    implementation("org.glassfish.jersey.containers:jersey-container-grizzly2-http")
+
+    // Aufgabe 2: AWS
     implementation(platform("software.amazon.awssdk:bom:2.28.21"))
     implementation("software.amazon.awssdk:ec2")
     implementation("software.amazon.awssdk:s3")
@@ -14,12 +22,19 @@ dependencies {
     implementation("software.amazon.awssdk:sts")
     implementation("software.amazon.awssdk:iam")
 
-    implementation("com.github.openstack4j.core:openstack4j:3.12")
-    implementation("org.apache.logging.log4j:log4j-core:2.26.1")
-    implementation("org.apache.logging.log4j:log4j-api:2.26.1")
-    implementation("org.glassfish.jersey.bundles:jaxrs-ri:2.45")
+    // Aufgabe 2: OpenStack
+    implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
+    implementation("com.github.openstack4j.core.connectors:openstack4j-jersey2:$openstack4jVersion")
 
-    implementation(fileTree("lib") { include("**/*.jar") })
+    // Logging
+    implementation(platform("org.apache.logging.log4j:log4j-bom:2.26.1"))
+    implementation("org.apache.logging.log4j:log4j-core")
+    implementation("org.apache.logging.log4j:log4j-api")
+
+    // Local libraries
+    implementation(fileTree("lib") {
+        include("**/*.jar")
+    })
 }
 
 sourceSets {
