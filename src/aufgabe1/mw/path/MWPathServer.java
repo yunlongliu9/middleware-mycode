@@ -13,6 +13,7 @@ import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
 import mw.client.MWWebServiceException;
+import mw.client.MWRegistryClient;
 import mw.client.MWWebServiceClient;
 
 import javax.ws.rs.GET;
@@ -22,6 +23,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 @Path("/path")
 public class MWPathServer {
+    private static MWRegistryClient registry;
     @GET
     @Path("/{startID}/{endID}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -327,12 +329,36 @@ public class MWPathServer {
         result.path = new String[0];
     }
 
+    try{
+        registry.putValue("gruppe6", "path-optimize",
+            "number-of-ids",
+            String.valueOf(result.getNumberOfIDs()));
+
+        registry.putValue("gruppe6", "path-optimize",
+            "number-of-calls",
+            String.valueOf(result.getNumberOfCalls()));
+    }catch(Exception e){
+        System.out.println("Could not put values to registry.");
+        e.printStackTrace();
+    }
+
     return result;
 }
     
 
     public static void main(String[] args) {
+        
         URI uri = URI.create("http://localhost:8080/");
+        registry = new MWRegistryClient();
+        try {
+            registry.createService("gruppe6", "path-optimize");
+            registry.putValue("gruppe6", "path-optimize",
+                    "address", uri.toString());
+        } catch (Exception e) {
+            System.out.println("Service already exists or could not be created.");
+            e.printStackTrace();
+        }
+        
         ResourceConfig config = new ResourceConfig(MWPathServer.class);
         HttpServer server = GrizzlyHttpServerFactory.createHttpServer(uri, config);
         System.out.println("Path Server running at " + uri);
