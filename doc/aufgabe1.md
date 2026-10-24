@@ -96,9 +96,36 @@ create a Path Service as web-service: use the facebook friendship to calculate t
 ## 1.2.1 create our own web service - PATH SERVICE
 offer:
 + GET /path/{startID}/{endID}
-return:
+return: find the shortest path between startID - endID
 public class MWPath {
     String[] path;
     int numberOfIDs;
     int numberOfCalls;
 }
+```java
+@Path("/path")
+public class MWPathServer {
+
+// path service provided methods: 
+    @GET
+    @Path("/{startID}/{endID}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public MWPath getPath(
+            @PathParam("startID") String startID,
+            @PathParam("endID") String endID) {
+
+        // algo 
+        return null;
+    }
+    
+    
+    
+    public static void main(String[] args) {
+	    URI uri = URI.create("http://localhost:8080/");
+	    ResourceConfig config = new ResourceConfig(MWPathServer.class);
+	    HttpServer server =
+	        GrizzlyHttpServerFactory.createHttpServer(uri, config); // create and start the web service server
+	    System.out.println("Path Server running at " + uri);
+	}
+}
+```
