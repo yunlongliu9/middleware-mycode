@@ -85,3 +85,20 @@ the existing service:(provided by professor)
 
     Response response = this.client.path("search").queryParam("string", string).request().get();
 ```
+
+# Aufgabe 1.2
+create a Path Service as web-service: use the facebook friendship to calculate the shortest path between 2 users;
+
+1.2.1 realize the shortest PATH-SERVICE
+1.2.2 extend web-service client[MWWebServiceClient.java] to give shell new command line : path <startID> <endID>
+1.2.3 optimize PATH-SERVICE by bunch of Reqs
+
+## 1.2.1 create our own web service - PATH SERVICE
+offer:
++ GET /path/{startID}/{endID}
+return:
+public class MWPath {
+    String[] path;
+    int numberOfIDs;
+    int numberOfCalls;
+}
