@@ -1,20 +1,33 @@
+import java.util.Properties
+
 plugins {
     java
+    id("com.diffplug.spotless") version "7.0.2"
 }
+
+// Load variables from .env
+val dotenv = Properties().apply {
+    val file = rootProject.file(".env")
+    if (file.isFile) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+// System environment takes priority over .env.
+// Missing variables are omitted entirely.
+val envCredentials: Map<String, String> =
+    listOf("MW_USERNAME", "MW_PASSWORD").mapNotNull { name ->
+        val value = providers.environmentVariable(name).orNull
+            ?: dotenv.getProperty(name)
+
+        value?.let { name to it }
+    }.toMap()
 
 repositories {
     mavenCentral()
 }
+
 dependencies {
-    // Versions
-    val openstack4jVersion = "3.12"
-
-    // Aufgabe 1: JAX-RS / Jersey / Grizzly
-    implementation(platform("org.glassfish.jersey:jersey-bom:2.45"))
-    implementation("org.glassfish.jersey.bundles:jaxrs-ri")
-    implementation("org.glassfish.jersey.containers:jersey-container-grizzly2-http")
-
-    // Aufgabe 2: AWS
     implementation(platform("software.amazon.awssdk:bom:2.28.21"))
     implementation("software.amazon.awssdk:ec2")
     implementation("software.amazon.awssdk:s3")
@@ -22,19 +35,13 @@ dependencies {
     implementation("software.amazon.awssdk:sts")
     implementation("software.amazon.awssdk:iam")
 
-    // Aufgabe 2: OpenStack
-    implementation("com.github.openstack4j.core:openstack4j-core:$openstack4jVersion")
-    implementation("com.github.openstack4j.core.connectors:openstack4j-jersey2:$openstack4jVersion")
+    implementation("com.github.openstack4j.core:openstack4j:3.12")
+    implementation("org.apache.logging.log4j:log4j-core:2.26.1")
+    implementation("org.apache.logging.log4j:log4j-api:2.26.1")
+    implementation("org.glassfish.jersey.bundles:jaxrs-ri:2.45")
+    implementation("org.glassfish.jersey.containers:jersey-container-grizzly2-http:2.45")
 
-    // Logging
-    implementation(platform("org.apache.logging.log4j:log4j-bom:2.26.1"))
-    implementation("org.apache.logging.log4j:log4j-core")
-    implementation("org.apache.logging.log4j:log4j-api")
-
-    // Local libraries
-    implementation(fileTree("lib") {
-        include("**/*.jar")
-    })
+    implementation(fileTree("lib") { include("**/*.jar") })
 }
 
 sourceSets {
@@ -53,6 +60,17 @@ java {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+    environment(envCredentials)
+}
+
+spotless {
+    java {
+        target("src/**/*.java")
+        googleJavaFormat()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
 val mainClasses = mapOf(
@@ -81,5 +99,7 @@ mainClasses.forEach { (taskName, cls) ->
         classpath = sourceSets.main.get().runtimeClasspath
         mainClass = cls
         standardInput = System.`in`
+
+        environment(envCredentials)
     }
 }
